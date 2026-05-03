@@ -1,0 +1,4 @@
+# rembg already pulls in onnxruntime, numpy, pillow
+rembg[gpu]>=2.0.50
+Pillow>=10.0.0
+numpy>=1.24.0
