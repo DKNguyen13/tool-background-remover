@@ -18,7 +18,7 @@ from PIL import Image, ImageTk, ImageDraw
 
 # ── Local modules ─────────────────────────────────────────────────────────────
 sys.path.insert(0, str(Path(__file__).parent))
-from remover import remove_background, RemoverConfig, collect_images
+from remover   import remove_background, RemoverConfig, collect_images
 from processor import preprocess,       PreprocessConfig
 from refiner  import postprocess,      PostprocessConfig
 from optimizer   import save_optimized,   OptimizeConfig
@@ -229,6 +229,46 @@ class SettingsPanel(ttk.Frame):
 
         ttk.Label(self, text="", font=("", 4)).grid(row=row, column=0); row += 1
 
+        # ── White / Solid BG Cleanup ─────────────────────────────────────────
+        section_label(self, "🧹  White/Solid BG Cleanup  ←  FIX viền trắng").grid(
+            row=row, column=0, columnspan=2, sticky="w", pady=(4, 2))
+        row += 1
+        self.white_cleanup_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self, text="Kill residual BG pixels (by colour distance)",
+                        variable=self.white_cleanup_var).grid(
+            row=row, column=0, columnspan=2, sticky="w"); row += 1
+
+        self.auto_bg_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self, text="Auto-detect BG colour from corners",
+                        variable=self.auto_bg_var).grid(
+            row=row, column=0, columnspan=2, sticky="w"); row += 1
+
+        self.white_kill_semi_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self, text="Also kill bright semi-transparent pixels",
+                        variable=self.white_kill_semi_var).grid(
+            row=row, column=0, columnspan=2, sticky="w"); row += 1
+
+        _, self.white_thresh = self._slider_row("Brightness threshold", 150, 255, 220, row)
+        row += 1
+
+        self.despill_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(self, text="Despill: recover true sprite colours",
+                        variable=self.despill_var).grid(
+            row=row, column=0, columnspan=2, sticky="w"); row += 1
+
+        _, self.despill_strength = self._slider_row("Despill strength", 0, 1, 85, row, resolution=0.01)
+        row += 1
+
+        # BG colour picker (manual override)
+        ttk.Label(self, text="BG Colour (hex)", style="Dim.TLabel").grid(row=row, column=0, sticky="w")
+        self.bg_color_var = tk.StringVar(value="#ffffff")
+        bg_entry = ttk.Entry(self, textvariable=self.bg_color_var, width=10)
+        bg_entry.grid(row=row, column=1, sticky="w", padx=(6, 0)); row += 1
+        ttk.Label(self, text="(overridden by auto-detect when checked)",
+                  style="Dim.TLabel").grid(row=row, column=0, columnspan=2, sticky="w"); row += 1
+
+        ttk.Label(self, text="", font=("", 4)).grid(row=row, column=0); row += 1
+
         # ── Edge Refinement ──────────────────────────────────────────────────
         section_label(self, "🔬  Edge Refinement").grid(row=row, column=0, columnspan=2, sticky="w", pady=(4, 4))
         row += 1
@@ -319,6 +359,13 @@ class SettingsPanel(ttk.Frame):
                 pass
 
     def build_configs(self):
+        # Parse manual bg color hex
+        try:
+            hx = self.bg_color_var.get().lstrip("#")
+            manual_bg = tuple(int(hx[i:i+2], 16) for i in (0, 2, 4))
+        except Exception:
+            manual_bg = (255, 255, 255)
+
         rem = RemoverConfig(
             model=self.model_var.get(),
             alpha_matting=self.alpha_matting_var.get(),
@@ -329,6 +376,15 @@ class SettingsPanel(ttk.Frame):
             edge_blur_radius=self.edge_blur.get(),
             edge_contract=int(self.edge_contract.get()),
             edge_expand=int(self.edge_expand.get()),
+            # White BG cleanup
+            white_bg_cleanup=self.white_cleanup_var.get(),
+            white_bg_threshold=int(self.white_thresh.get()),
+            white_bg_kill_semi=self.white_kill_semi_var.get(),
+            despill=self.despill_var.get(),
+            despill_bg_color=manual_bg,
+            despill_strength=self.despill_strength.get(),
+            auto_detect_bg_color=self.auto_bg_var.get(),
+            # Generic decontam
             decontaminate=self.decontam_var.get(),
             decontaminate_strength=self.decontam_strength.get(),
             output_format=self.fmt_var.get(),
@@ -385,7 +441,7 @@ class LogPanel(tk.Frame):
 class ImgToolApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("ImgTool  ·  BG Remover  ·  Game Dev Edition · nguyendk")
+        self.title("ImgTool  ·  BG Remover  ·  Game Dev Edition")
         self.geometry("1280x820")
         self.minsize(960, 640)
         self.configure(bg=BG)
@@ -411,7 +467,7 @@ class ImgToolApp(tk.Tk):
         hdr.pack_propagate(False)
         tk.Label(hdr, text="⬛ IMGTOOL", bg=BG2, fg=ACCENT,
                  font=("Consolas", 16, "bold")).pack(side="left", padx=16, pady=12)
-        tk.Label(hdr, text="Background Remover  ·  Game Dev Edition · nguyendk", bg=BG2, fg=TEXT_DIM,
+        tk.Label(hdr, text="Background Remover  ·  Game Dev Edition", bg=BG2, fg=TEXT_DIM,
                  font=("Segoe UI", 9)).pack(side="left", pady=16)
 
         sep(self).pack(fill="x")

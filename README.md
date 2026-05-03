@@ -1,6 +1,6 @@
-# ImgTool — BG Remover · Game Dev Edition
+# ImgTool — BG Remover
 
-Công cụ xoá nền ảnh chuyên dụng cho game dev với:
+Công cụ xoá nền ảnh chuyên dụng với:
 - **Alpha Matting** → cắt cạnh sắc nét, không còn viền trắng/đen
 - **Edge Refinement** → feather, contract, expand mask tùy chỉnh
 - **Colour Decontamination** → xoá màu nền bám vào viền sprite
